@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ECS Task Right-Sizer</title>
+    <!-- Using Tailwind CSS for clean, rapid styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #f8fafc; }
+        .aws-gradient { background: linear-gradient(90deg, #232F3E 0%, #FF9900 100%); }
+    </style>
+</head>
+<body class="text-slate-800 font-sans min-h-screen">
+
+    <!-- Header -->
+    <header class="aws-gradient text-white py-6 shadow-md">
+        <div class="max-w-4xl mx-auto px-4">
+            <h1 class="text-3xl font-bold">ECS Task Right-Sizer</h1>
+            <p class="text-sm mt-2 opacity-90">Calculate the optimal vCPU and Memory for your Amazon ECS / Fargate tasks.</p>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-4xl mx-auto px-4 py-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+        
+        <!-- Input Form -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <h2 class="text-xl font-semibold mb-4 border-b pb-2">Application Profile</h2>
+            
+            <form id="sizingForm" class="space-y-4">
+                
+                <!-- Runtime -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Runtime / Language</label>
+                    <select id="runtime" class="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:ring-2 focus:ring-orange-500 focus:outline-none">
+                        <option value="go">Go / Rust / C++ (Lightweight)</option>
+                        <option value="node" selected>Node.js / JavaScript</option>
+                        <option value="python">Python / Ruby / PHP</option>
+                        <option value="dotnet">.NET Core</option>
+                        <option value="java">Java / JVM (Heavy)</option>
+                    </select>
+                </div>
+
+                <!-- App Type -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Application Type</label>
+                    <select id="appType" class="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:ring-2 focus:ring-orange-500 focus:outline-none">
+                        <option value="api">Web Server / REST API (I/O Bound)</option>
+                        <option value="worker">Background Worker (CPU Bound)</option>
+                        <option value="data">Data Processing / Batch</option>
+                    </select>
+                </div>
+
+                <!-- Traffic/Usage -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Expected Traffic / Usage</label>
+                    <select id="traffic" class="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:ring-2 focus:ring-orange-500 focus:outline-none">
+                        <option value="low">Low (Dev, Staging, Internal Tool)</option>
+                        <option value="medium" selected>Medium (Standard Production API)</option>
+                        <option value="high">High (Heavy Production Traffic)</option>
+                    </select>
+                </div>
+
+                <!-- Architecture Strategy -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Optimization Strategy</label>
+                    <select id="strategy" class="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:ring-2 focus:ring-orange-500 focus:outline-none">
+                        <option value="balanced" selected>Balanced</option>
+                        <option value="ha">High Availability (Favour Horizontal Scaling)</option>
+                        <option value="cost">Cost Optimized (Minimize Resources)</option>
+                    </select>
+                </div>
+
+            </form>
+        </div>
+
+        <!-- Results Panel -->
+        <div class="space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-center">
+                <h2 class="text-xl font-semibold mb-4 text-slate-700">Recommended Task Size</h2>
+                
+                <div class="flex justify-center items-center gap-6 mb-6">
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 w-32">
+                        <div class="text-3xl font-bold text-blue-700" id="resCpu">--</div>
+                        <div class="text-xs text-blue-600 mt-1 uppercase font-semibold">vCPU</div>
+                    </div>
+                    <div class="text-2xl text-slate-300">+</div>
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4 w-32">
+                        <div class="text-3xl font-bold text-green-700" id="resMem">--</div>
+                        <div class="text-xs text-green-600 mt-1 uppercase font-semibold">GB RAM</div>
+                    </div>
+                </div>
+
+                <div class="text-left bg-slate-50 p-4 rounded-lg border border-slate-200 text-sm">
+                    <h3 class="font-semibold text-slate-800 mb-2">Architecture Advice:</h3>
+                    <p id="resAdvice" class="text-slate-600">Select your parameters to see recommendations.</p>
+                </div>
+                
+                <div id="warningBox" class="mt-4 text-left bg-orange-50 p-4 rounded-lg border border-orange-200 text-sm hidden">
+                    <p id="resWarning" class="text-orange-800 flex gap-2">
+                        <!-- warning icon -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                          <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                        </svg>
+                        <span id="warningText"></span>
+                    </p>
+                </div>
+            </div>
+            
+            <div class="text-xs text-slate-500 text-center">
+                * Recommendations are mapped to <a href="https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-cpu-memory-error.html" class="text-blue-500 underline" target="_blank">valid AWS Fargate configurations</a> to prevent resource fragmentation.
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Valid AWS Fargate configurations (vCPU, GB Memory)
+        const fargateConfigs = [
+            { c: 0.25, m: 0.5 }, { c: 0.25, m: 1 }, { c: 0.25, m: 2 },
+            { c: 0.5, m: 1 }, { c: 0.5, m: 2 }, { c: 0.5, m: 3 }, { c: 0.5, m: 4 },
+            { c: 1, m: 2 }, { c: 1, m: 3 }, { c: 1, m: 4 }, { c: 1, m: 5 }, { c: 1, m: 6 }, { c: 1, m: 7 }, { c: 1, m: 8 },
+            { c: 2, m: 4 }, { c: 2, m: 6 }, { c: 2, m: 8 }, { c: 2, m: 12 }, { c: 2, m: 16 },
+            { c: 4, m: 8 }, { c: 4, m: 12 }, { c: 4, m: 16 }, { c: 4, m: 24 }, { c: 4, m: 30 },
+            { c: 8, m: 16 }, { c: 8, m: 32 }, { c: 8, m: 60 }
+        ];
+
+        function calculateSize() {
+            const runtime = document.getElementById('runtime').value;
+            const appType = document.getElementById('appType').value;
+            const traffic = document.getElementById('traffic').value;
+            const strategy = document.getElementById('strategy').value;
+
+            // 1. Establish baseline depending on language runtime footprint
+            let reqCpu = 0.25;
+            let reqMem = 0.5;
+
+            if (runtime === 'java') { reqCpu = 1; reqMem = 2; }
+            else if (runtime === 'dotnet') { reqCpu = 0.5; reqMem = 1; }
+            else if (runtime === 'node' || runtime === 'python') { reqCpu = 0.5; reqMem = 1; }
+            // go/rust remain 0.25 / 0.5
+
+            // 2. Adjust for App Type (CPU Bound vs IO Bound)
+            if (appType === 'worker') { reqCpu *= 2; }
+            if (appType === 'data') { reqCpu *= 4; reqMem *= 2; }
+
+            // 3. Adjust for Traffic
+            if (traffic === 'medium') { reqCpu *= 2; reqMem *= 2; }
+            if (traffic === 'high') { 
+                reqCpu *= (strategy === 'ha' ? 2 : 4); 
+                reqMem *= (strategy === 'ha' ? 2 : 4); 
+            }
+
+            // 4. Adjust for Strategy
+            if (strategy === 'cost') {
+                reqCpu = Math.max(0.25, reqCpu * 0.5);
+                reqMem = Math.max(0.5, reqMem * 0.5);
+            }
+
+            // 5. Find the closest valid Fargate configuration
+            let bestConfig = fargateConfigs.find(cfg => cfg.c >= reqCpu && cfg.m >= reqMem);
+            if (!bestConfig) bestConfig = fargateConfigs[fargateConfigs.length - 1]; // Fallback to max
+
+            // Update UI
+            document.getElementById('resCpu').innerText = bestConfig.c;
+            document.getElementById('resMem').innerText = bestConfig.m;
+
+            // 6. Generate Contextual Advice
+            let tasksCount = 1;
+            let adviceStr = "";
+            let warningStr = "";
+
+            if (traffic === 'high') {
+                tasksCount = strategy === 'cost' ? 3 : 6;
+                adviceStr = `Deploy at least <b>${tasksCount}+ tasks</b> using ECS Service Auto Scaling. Set a Target Tracking policy on CPU at ~70%. Horizontal scaling is significantly safer for high traffic than running a single monolithic task.`;
+            } else if (traffic === 'medium' || strategy === 'ha') {
+                tasksCount = strategy === 'cost' ? 1 : 2;
+                if (tasksCount < 2 && strategy === 'ha') tasksCount = 2;
+                adviceStr = `Run <b>${tasksCount} task(s)</b>. For production API workloads, always ensure at least 2 tasks are running distributed across different Availability Zones (AZs) behind an Application Load Balancer.`;
+            } else {
+                adviceStr = "A single task is sufficient for development, staging, or low-usage internal tools. To save costs, let it spin down when unused if using a queue-driven architecture.";
+            }
+            
+            document.getElementById('resAdvice').innerHTML = adviceStr;
+
+            // 7. Check for Language/Architecture Anti-patterns (Warnings)
+            const warningBox = document.getElementById('warningBox');
+            const warningText = document.getElementById('warningText');
+            
+            if (runtime === 'node' && bestConfig.c > 1) {
+                warningStr = "Node.js is naturally single-threaded. Assigning > 1 vCPU will be wasted unless you utilize the 'cluster' module or PM2. You are usually better off scaling out (more tasks) rather than scaling up.";
+            } else if (runtime === 'python' && bestConfig.c > 1) {
+                warningStr = "Python's Global Interpreter Lock (GIL) limits multi-threading. If assigning > 1 vCPU, ensure you are running multiple Gunicorn/Uvicorn workers, otherwise scale out horizontally.";
+            } else if (runtime === 'java' && bestConfig.m <= 1) {
+                warningStr = "The JVM can struggle with < 2GB RAM due to baseline garbage collection overhead. Ensure your -Xmx flag is set strictly, or consider using GraalVM.";
+            }
+
+            if (warningStr !== "") {
+                warningText.innerText = warningStr;
+                warningBox.classList.remove('hidden');
+            } else {
+                warningBox.classList.add('hidden');
+            }
+        }
+
+        // Attach Event Listeners
+        document.querySelectorAll('select').forEach(select => {
+            select.addEventListener('change', calculateSize);
+        });
+
+        // Initial Calculation
+        calculateSize();
+    </script>
+</body>
+</html>
